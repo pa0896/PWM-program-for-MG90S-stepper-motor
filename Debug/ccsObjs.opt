@@ -1,0 +1,4 @@
+"./main.obj"
+"./tm4c123gh6pge_startup_ccs.obj"
+"../tm4c123gh6pge.cmd"
+-llibc.a
