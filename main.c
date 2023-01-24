@@ -11,10 +11,13 @@
 #define GPIO_PORTB_DEN_R        (*((volatile unsigned long *)0x4000551C))
 #define GPIO_PORTB_AMSEL_R      (*((volatile unsigned long *)0x40005528))
 #define GPIO_PORTB_PCTL_R       (*((volatile unsigned long *)0x4000552C))
-#define RCGCPWM_R					(*((volatile unsigned long *)0x400FE640))
+#define SYSCTL_RCGCPWM_R		(*((volatile unsigned long *)0x400FE640))
+#define SYSCTL_PRPWM_R			(*((volatile unsigned long *)0x400FEA40))
 #define GPIO_PORTB_ODR_R 		(*((volatile unsigned long *)0x4000550C))
+#define SYSCTL_RCGCGPIO_R 		(*((volatile unsigned long *)0x400FE608))
 #define SYSCTL_RCC_R 			(*((volatile unsigned long *)0x400FE060))
-#define PWMCTL_R 					(*((volatile unsigned long *)0x40028000))
+#define SYSCTL_PRGPIO_R			(*((volatile unsigned long *)0x400FEA08))
+#define PWMCTL_R 				(*((volatile unsigned long *)0x40028000))
 #define PWM_GENA_R 				(*((volatile unsigned long *)0x40028060))
 #define PWM_LOAD_R 				(*((volatile unsigned long *)0x40028050))
 #define PWM_CMPA_R 				(*((volatile unsigned long *)0x40028058))
@@ -40,13 +43,15 @@ PWM clock rate = processor clock rate/SYSCTL_RCC_PWMDIV
  */
 
 void init(uint16_t period,uint16_t duty){
-	  RCGCPWM_R |= 0x00000001;			//PWM clock and module 0 activated
-	  while((RCGCPWM_R & 0x00000001) == 0){
+	  SYSCTL_RCGCPWM_R |= 0x00000001;			//PWM clock and module 0 activated
+	  while((SYSCTL_PRPWM_R&0x00000001) == 0){
+		  //wait for the PWM clock to be stabilised
 	  };
-	  SYSCTL_RCGC2_R |= 0x02;           // Port B clock
-	  while((SYSCTL_RCGC2_R & 0x00000002) == 0){
+	  SYSCTL_RCGCGPIO_R |= 0x00000002;           // Port B clock
+	  while((SYSCTL_PRGPIO_R&0x00000002) == 0){
+		  //wait for Port B clock to be stabilised
 	  };
-	  GPIO_PORTB_DIR_R |= 0x00000002;         // PB6 output
+	  GPIO_PORTB_DIR_R |= 0x00000040;         // PB6 output
 	  GPIO_PORTB_AFSEL_R |= 0x00000040;      // enable alternate function on PB6
 	  GPIO_PORTB_ODR_R &= ~0x00000040;		// disable open drain on PB6?
 	  GPIO_PORTB_DEN_R |= 0x00000040;         // enable digital I/O on PB6
@@ -55,13 +60,15 @@ void init(uint16_t period,uint16_t duty){
 	  /*
 	   * optional crap ahead
 	   */
-	  SYSCTL_RCC_R |= 0x00100000;  // Use the system clock divider
-	  SYSCTL_RCC_R |= 0x000E0000;  // Precautionary measure to clear the divider field
-	  SYSCTL_RCC_R = ((SYSCTL_RCC_R & 0x000E0000) + 0x6);
+	  SYSCTL_RCC_R = 0x00100000 | ((SYSCTL_RCC_R&(~0x000E0000)) + 0x2);
 	  PWMCTL_R = 0;  // reloading down-counting mode
-	  PWM_GENA_R |= 0x000000C8;  //PB6 goes high on CMPA down
-	  PWM_LOAD_R |= period - 1;  //cycles needed to count down to 0
-	  PWM_CMPA_R |= duty - 1;    //count value when output rises
+	  PWM_GENA_R = 0x000000C8;
+	  /*
+	   * PB6 goes high on CMPA down; We specify in the PWM_0_GENA_R register
+	   * that the comparator action is to set to one, and the load action is set to zero.
+	   */
+	  PWM_LOAD_R = period - 1;  //cycles needed to count down to 0; We specify the period in LOAD register
+	  PWM_CMPA_R = duty - 1;    //count value when output rises; we specify the duty cycle in CMPA register
 	  PWM_CTL_R |= 0x00000001;  //start PWM generator 0
 	  PWM_ENABLE_R |= 0x00000001;  //enable PWM generator 0
 }
@@ -70,12 +77,10 @@ void PWM_Duty(uint16_t duty){
 	PWM_CMPA_R = duty - 1;  // count value when output rises
 }
 
-int main(void)
+void main(void)
 {
 	init(25000,12500);
-	PWM_Duty(12500);
 	while(1){
 		GPIO_PORTB_DATA_R ^= 0x00000040;
 	}
-	return 0;
 }
