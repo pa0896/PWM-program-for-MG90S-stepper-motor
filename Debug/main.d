@@ -11,7 +11,6 @@ main.obj: /home/kreisch/ti/ccs1210/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/incl
 main.obj: /home/kreisch/ti/ccs1210/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/include/machine/_types.h
 main.obj: /home/kreisch/ti/ccs1210/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/include/machine/_stdint.h
 main.obj: /home/kreisch/ti/ccs1210/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/include/sys/_stdint.h
-main.obj: /home/kreisch/ti/ccs1210/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/include/float.h
 
 ../main.c:
 
@@ -34,6 +33,4 @@ main.obj: /home/kreisch/ti/ccs1210/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/incl
 /home/kreisch/ti/ccs1210/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/include/machine/_stdint.h:
 
 /home/kreisch/ti/ccs1210/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/include/sys/_stdint.h:
-
-/home/kreisch/ti/ccs1210/ccs/tools/compiler/ti-cgt-arm_20.2.7.LTS/include/float.h:
 

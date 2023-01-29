@@ -4,7 +4,6 @@
  * main.c
  */
 #include <stdint.h>
-#include <float.h>
 #define SYSCTL_RCGC2_R          (*((volatile unsigned long *)0x400FE108))
 #define GPIO_PORTB_DATA_R       (*((volatile unsigned long *)0x400053FC))
 #define GPIO_PORTB_DIR_R        (*((volatile unsigned long *)0x40005400))
@@ -42,7 +41,10 @@ Duty is number of PWM clock cycles output is high (2<=duty<=period-1)
 PWM clock rate = processor clock rate/SYSCTL_RCC_PWMDIV
 = BusClock/2
  */
-void Delay_ms(int n);
+void Delay_ms(uint16_t n);
+uint16_t i;
+uint16_t j;
+uint16_t k;
 void init(uint16_t period,uint16_t duty){
 	  SYSCTL_RCGCPWM_R |= 0x00000001;			//PWM clock and module 0 activated
 	  while((SYSCTL_PRPWM_R&0x00000001) == 0){
@@ -62,11 +64,11 @@ void init(uint16_t period,uint16_t duty){
 	  	   * set bit 20 of the register to enable the frequency divider as well as choose /64 configuration
 	  	   * to get the clock down to 250 KHz. The XTAL frequency of TM4C is 16 MHz
 	  */
-	  SYSCTL_RCC_R = 0x00100000 | ((SYSCTL_RCC_R&(~0x000E0000)) + 0x7);
-	  PWMCTL_R = 0;  // selection of count down mode
-	  PWM_CTL_R = (PWM_CTL_R&0x00000002) + 0x0;  // selection of count down mode
-	  PWM_GENA_R = (PWM_GENA_R&0x000000C0) + 0x2;  //drive pwm low when counter reaches COMPARE
-	  PWM_GENA_R = (PWM_GENA_R&0x00000006) + 0x3;  //drive pwm high when counter reaches LOAD
+	  SYSCTL_RCC_R |= 0x00100000;
+	  SYSCTL_RCC_R |= 0x000E0000;
+	  PWMCTL_R &= ~0x00000001;  // disable generator 0
+	  PWM_CTL_R &= ~0x00000002;
+	  PWM_GENA_R |= 0x0000008C;  //drive pwm low when counter reaches COMPARE
 	  PWM_LOAD_R = period-1;  //cycles needed to count down to 0; We specify the period in LOAD register
 	  PWM_CMPA_R = duty - 1;    //count value when output rises; we specify the duty cycle in CMPA register
 	  PWM_CTL_R |= 0x00000001;  //start PWM generator 0
@@ -77,9 +79,23 @@ void PWM_Duty(uint16_t duty){
 	PWM_CMPA_R = duty - 1;  // count value when output rises
 }
 
+void Delay_ms(uint16_t time){
+	for(i=0; i < time ; i++){
+		for(j = 0 ; j < 3180 ; j++){
+
+		}
+	}
+}
+
 void main(void)
 {
-	init(5000,2500);  // LOAD value to be sent as period, COMPARE going to be sent as duty
+	init(5000,5000);  // LOAD value to be sent as period, COMPARE going to be sent as duty
 	while(1){
+		Delay_ms(50);
+		for(k = 4999 ; k >= 4350 ; k--){
+			PWM_Duty(k);
+			Delay_ms(100);
+			PWM_Duty(4350+(5000-k));
+		}
 	}
 }
