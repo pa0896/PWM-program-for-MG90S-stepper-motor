@@ -4,6 +4,7 @@
  * main.c
  */
 #include <stdint.h>
+#include <float.h>
 #define SYSCTL_RCGC2_R          (*((volatile unsigned long *)0x400FE108))
 #define GPIO_PORTB_DATA_R       (*((volatile unsigned long *)0x400053FC))
 #define GPIO_PORTB_DIR_R        (*((volatile unsigned long *)0x40005400))
@@ -41,7 +42,7 @@ Duty is number of PWM clock cycles output is high (2<=duty<=period-1)
 PWM clock rate = processor clock rate/SYSCTL_RCC_PWMDIV
 = BusClock/2
  */
-
+void Delay_ms(int n);
 void init(uint16_t period,uint16_t duty){
 	  SYSCTL_RCGCPWM_R |= 0x00000001;			//PWM clock and module 0 activated
 	  while((SYSCTL_PRPWM_R&0x00000001) == 0){
@@ -58,16 +59,15 @@ void init(uint16_t period,uint16_t duty){
 	  GPIO_PORTB_AMSEL_R &= ~0x00000040;     // disable analog function on PB6
 	  GPIO_PORTB_PCTL_R = (GPIO_PORTB_PCTL_R & 0xF0FFFFFF) + 0x04000000;  // configure PB6 as PWM
 	  /*
-	   * optional crap ahead
-	   */
-	  SYSCTL_RCC_R = 0x00100000 | ((SYSCTL_RCC_R&(~0x000E0000)) + 0x2);
-	  PWMCTL_R = 0;  // reloading down-counting mode
-	  PWM_GENA_R = 0x000000C8;
-	  /*
-	   * PB6 goes high on CMPA down; We specify in the PWM_0_GENA_R register
-	   * that the comparator action is to set to one, and the load action is set to zero.
-	   */
-	  PWM_LOAD_R = period - 1;  //cycles needed to count down to 0; We specify the period in LOAD register
+	  	   * set bit 20 of the register to enable the frequency divider as well as choose /64 configuration
+	  	   * to get the clock down to 250 KHz. The XTAL frequency of TM4C is 16 MHz
+	  */
+	  SYSCTL_RCC_R = 0x00100000 | ((SYSCTL_RCC_R&(~0x000E0000)) + 0x7);
+	  PWMCTL_R = 0;  // selection of count down mode
+	  PWM_CTL_R = (PWM_CTL_R&0x00000002) + 0x0;  // selection of count down mode
+	  PWM_GENA_R = (PWM_GENA_R&0x000000C0) + 0x2;  //drive pwm low when counter reaches COMPARE
+	  PWM_GENA_R = (PWM_GENA_R&0x00000006) + 0x3;  //drive pwm high when counter reaches LOAD
+	  PWM_LOAD_R = period-1;  //cycles needed to count down to 0; We specify the period in LOAD register
 	  PWM_CMPA_R = duty - 1;    //count value when output rises; we specify the duty cycle in CMPA register
 	  PWM_CTL_R |= 0x00000001;  //start PWM generator 0
 	  PWM_ENABLE_R |= 0x00000001;  //enable PWM generator 0
@@ -79,8 +79,7 @@ void PWM_Duty(uint16_t duty){
 
 void main(void)
 {
-	init(25000,12500);
+	init(5000,2500);  // LOAD value to be sent as period, COMPARE going to be sent as duty
 	while(1){
-		GPIO_PORTB_DATA_R ^= 0x00000040;
 	}
 }
